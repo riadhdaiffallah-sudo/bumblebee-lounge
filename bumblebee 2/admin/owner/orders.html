@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bumblebee — Commandes</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../admin.css"/>
+</head>
+<body>
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="toast" id="toast"></div>
+
+<div class="admin-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo">Bumble<span>bee</span></div>
+      <div class="role-badge">👑 Propriétaire</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon">📊</span>Dashboard</a>
+      <a class="nav-item active" href="orders.html"><span class="nav-icon">🧾</span>Commandes</a>
+      <a class="nav-item" href="reservations.html"><span class="nav-icon">📅</span>Réservations</a>
+      <div class="nav-section">Gestion</div>
+      <a class="nav-item" href="inventory.html"><span class="nav-icon">📦</span>Inventaire</a>
+      <a class="nav-item" href="matches.html"><span class="nav-icon">⚽</span>Matchs</a>
+      <a class="nav-item" href="customers.html"><span class="nav-icon">👥</span>Clients</a>
+      <a class="nav-item" href="staff.html"><span class="nav-icon">👤</span>Personnel</a>
+      <a class="nav-item" href="archive.html"><span class="nav-icon">🗂️</span>Archives</a>
+      <div class="nav-section">Site</div>
+      <a class="nav-item" href="../../public/home.html" target="_blank"><span class="nav-icon">🌐</span>Voir le site</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">🚪 Déconnexion</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="main-header">
+      <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+      <h1>Gestion des <em>commandes</em></h1>
+      <div class="header-actions">
+        <span class="live-dot"></span>
+        <span style="font-size:.52rem;letter-spacing:.15em;color:var(--gray)">Temps réel</span>
+      </div>
+    </header>
+
+    <div class="main-body">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Toutes les <em>commandes</em></div>
+          <div class="table-filters">
+            <button class="filter-btn active" onclick="setFilter('all',this)">Tout</button>
+            <button class="filter-btn" onclick="setFilter('today',this)">Aujourd'hui</button>
+            <button class="filter-btn" onclick="setFilter('pending',this)">En attente</button>
+            <button class="filter-btn" onclick="setFilter('unpaid',this)">Non payé</button>
+          </div>
+        </div>
+        <div class="orders-list" id="orders-list">
+          <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-msg">Chargement...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from '../../firebase-config.js';
+import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc, Timestamp, where }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href = '../login.html'; return; }
+  const snap = await getDoc(doc(db,'users',user.uid));
+  if (!snap.exists() || snap.data().role !== 'owner') window.location.href = '../login.html';
+});
+
+window.openSidebar=()=>{document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show');};
+window.closeSidebar=()=>{document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');};
+window.doLogout=async()=>{await signOut(auth);window.location.href='../login.html';};
+
+let allOrders = [];
+let currentFilter = 'all';
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+function statusBadge(s){
+  const map={pending:'badge-pending',preparing:'badge-preparing',ready:'badge-ready',done:'badge-done'};
+  const labels={pending:'En attente',preparing:'En préparation',ready:'Prêt ✓',done:'Terminé'};
+  return `<span class="badge ${map[s]||'badge-pending'}">${labels[s]||s}</span>`;
+}
+
+function fmt(ts){if(!ts)return '';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('fr-DZ')+' '+d.toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'});}
+
+window.setFilter=(f,btn)=>{
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+};
+
+function filterOrders(orders){
+  const now=new Date();
+  const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(currentFilter==='today') return orders.filter(o=>{const d=o.createdAt?.toDate?o.createdAt.toDate():new Date();return d>=todayStart;});
+  if(currentFilter==='pending') return orders.filter(o=>o.status==='pending');
+  if(currentFilter==='unpaid') return orders.filter(o=>!o.paid);
+  return orders;
+}
+
+function renderOrders(){
+  const filtered=filterOrders(allOrders);
+  const el=document.getElementById('orders-list');
+  if(filtered.length===0){el.innerHTML='<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-msg">Aucune commande trouvée.</div></div>';return;}
+  el.innerHTML=filtered.map(o=>`
+    <div class="order-card" id="oc-${o.id}">
+      <div class="order-card-top">
+        <span class="order-id">${o.orderId}</span>
+        <span class="order-client">${o.clientName} · ${o.clientPhone}</span>
+        <span class="order-time">${fmt(o.createdAt)}</span>
+        ${statusBadge(o.status)}
+        ${o.paid?'<span class="badge badge-paid">✅ Payé</span>':'<span class="badge badge-unpaid">❌ Non payé</span>'}
+      </div>
+      <div class="order-items-list">${(o.items||[]).map(i=>`• ${i.name} ×${i.qty} — ${i.price*i.qty} DA`).join('<br>')}</div>
+      <div class="order-card-bottom">
+        <span class="order-total">${o.total}<span class="da">DA</span></span>
+        <select class="action-select" onchange="updateStatus('${o.id}',this.value)">
+          <option value="pending" ${o.status==='pending'?'selected':''}>⏳ En attente</option>
+          <option value="preparing" ${o.status==='preparing'?'selected':''}>🔥 En préparation</option>
+          <option value="ready" ${o.status==='ready'?'selected':''}>✅ Prêt</option>
+          <option value="done" ${o.status==='done'?'selected':''}>🏁 Terminé</option>
+        </select>
+        <button class="action-btn ${o.paid?'red':'green'}" onclick="togglePaid('${o.id}',${o.paid})">
+          ${o.paid?'Marquer impayé':'✅ Marquer payé'}
+        </button>
+        <button class="action-btn" onclick="sendReceipt('${o.id}')">📱 WhatsApp</button>
+      </div>
+    </div>`).join('');
+}
+
+window.updateStatus=async(id,status)=>{
+  await updateDoc(doc(db,'orders',id),{status});
+  showToast('Statut mis à jour → '+status);
+};
+
+window.togglePaid=async(id,currentPaid)=>{
+  const newPaid=!currentPaid;
+  await updateDoc(doc(db,'orders',id),{paid:newPaid});
+  showToast(newPaid?'✅ Marqué comme payé':'Marqué comme non payé');
+  // Send paid confirmation via WhatsApp
+  if(newPaid){
+    const order=allOrders.find(o=>o.id===id);
+    if(order){
+      const msg=encodeURIComponent(`✅ *PAIEMENT CONFIRMÉ*\n\n🐝 Bumblebee Lounge\n📋 ${order.orderId}\n💰 ${order.total} DA\n✅ Payé · Merci ! 🙏`);
+      const phone=(order.clientPhone||'').replace(/\s/g,'').replace('+','');
+      if(phone) window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
+    }
+  }
+};
+
+window.sendReceipt=id=>{
+  const o=allOrders.find(x=>x.id===id);
+  if(!o)return;
+  const items=(o.items||[]).map(i=>`• ${i.name} ×${i.qty}     ${i.price*i.qty} DA`).join('\n');
+  const msg=encodeURIComponent(`🐝 *BUMBLEBEE LOUNGE*\n📋 ${o.orderId}\n👤 ${o.clientName}\n─────────────────\n${items}\n─────────────────\n💰 TOTAL: ${o.total} DA\n💵 ${o.paid?'✅ PAYÉ':'❌ NON PAYÉ'}`);
+  const phone=(o.clientPhone||'').replace(/\s/g,'').replace('+','');
+  if(phone) window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
+};
+
+// Real-time listener
+const q=query(collection(db,'orders'),orderBy('createdAt','desc'));
+onSnapshot(q,snap=>{
+  allOrders=snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderOrders();
+});
+</script>
+</body>
+</html>

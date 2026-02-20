@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bumblebee — Réservation</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/theme.css"/>
+<style>
+/* TRANSITION */
+#bb-transition{position:fixed;inset:0;z-index:99999;background:#050505;pointer-events:none;opacity:1;transition:opacity .4s ease;display:flex;align-items:center;justify-content:center}
+#bb-transition-logo{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;letter-spacing:.4em;color:#c9a84c;opacity:1;transition:opacity .3s ease}
+
+/* LAYOUT */
+.resa-layout{display:grid;grid-template-columns:1fr 380px;gap:48px;max-width:1200px;margin:0 auto;padding:80px var(--px);align-items:start}
+@media(max-width:960px){.resa-layout{grid-template-columns:1fr;gap:40px}}
+
+/* MATCHES */
+.matches-section{margin-bottom:52px}
+.matches-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;margin-bottom:6px}
+.matches-sub{font-size:.58rem;letter-spacing:.12em;color:var(--gray);margin-bottom:24px;line-height:1.6}
+.match-card{display:flex;align-items:center;gap:16px;padding:18px 20px;border:1px solid var(--border);margin-bottom:10px;transition:all .3s;cursor:pointer;position:relative;overflow:hidden}
+.match-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
+.match-card:hover{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.03)}
+.match-card.selected{border-color:var(--gold);background:rgba(201,168,76,.06)}
+.match-badge{font-size:.46rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);background:rgba(201,168,76,.1);padding:4px 8px;white-space:nowrap;flex-shrink:0}
+.match-teams{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:300;flex:1}
+.match-info{text-align:right;flex-shrink:0}
+.match-date{font-size:.58rem;color:var(--white);letter-spacing:.08em}
+.match-time-val{font-size:.54rem;color:var(--gray);letter-spacing:.08em}
+.match-fee{font-size:.5rem;color:var(--gold);letter-spacing:.15em;margin-top:2px}
+.no-matches{padding:20px;border:1px solid var(--border);text-align:center;font-size:.62rem;color:var(--gray);letter-spacing:.1em;line-height:1.7}
+
+/* FORM */
+.form-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;margin-bottom:6px}
+.form-sub{font-size:.58rem;letter-spacing:.12em;color:var(--gray);margin-bottom:32px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.form-grid .full{grid-column:1/-1}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+.submit-btn{width:100%;padding:17px;background:var(--gold);border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:500;letter-spacing:.38em;text-transform:uppercase;transition:all .3s;margin-top:24px;display:flex;align-items:center;justify-content:center;gap:10px}
+.submit-btn:hover{background:var(--gold-light)}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed}
+.submit-note{font-size:.54rem;color:var(--gray);letter-spacing:.08em;text-align:center;margin-top:10px;line-height:1.6}
+
+/* SIDEBAR */
+.sidebar{position:sticky;top:100px}
+@media(max-width:960px){.sidebar{position:static}}
+.sidebar-card{background:rgba(201,168,76,.04);border:1px solid var(--border);padding:32px 28px;margin-bottom:20px}
+.sidebar-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300;color:var(--gold);margin-bottom:20px}
+.sidebar-item{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.sidebar-item:last-child{border-bottom:none}
+.si-icon{font-size:.95rem;width:24px;text-align:center;margin-top:1px;flex-shrink:0}
+.si-label{font-size:.46rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+.si-val{font-size:.6rem;color:var(--gray);line-height:1.6;letter-spacing:.04em}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--dark);border:1px solid rgba(201,168,76,.2);padding:40px 32px;max-width:480px;width:100%;animation:modalIn .4s ease;text-align:center;max-height:90vh;overflow-y:auto}
+.modal-icon{font-size:2.8rem;margin-bottom:16px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:var(--gold);margin-bottom:12px}
+.modal-desc{font-size:.62rem;color:var(--gray);line-height:1.8;margin-bottom:24px;letter-spacing:.04em}
+.modal-details{background:rgba(201,168,76,.04);border:1px solid var(--border);padding:20px;margin-bottom:24px;text-align:left}
+.detail-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.6rem}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--gray);letter-spacing:.08em}
+.detail-val{color:var(--white);text-align:right}
+.modal-close{width:100%;padding:14px;background:var(--gold);border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:.6rem;font-weight:500;letter-spacing:.32em;text-transform:uppercase;transition:all .3s}
+.modal-close:hover{background:var(--gold-light)}
+
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+</style>
+</head>
+<body>
+
+<!-- TRANSITION -->
+<div id="bb-transition"><div id="bb-transition-logo">Bumble<em style="font-style:italic;color:#c9a84c">bee</em></div></div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- DRAWER -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <a href="home.html">Accueil</a>
+  <a href="menu.html">Menu</a>
+  <a href="hookah.html">Chicha</a>
+  <a href="reservation.html" class="active">Réservation</a>
+  <a href="contact.html">Contact</a>
+  <a href="order.html" class="drawer-cta">Commander</a>
+  <div class="drawer-langs">
+    <button data-lang="fr">FR</button>
+    <button data-lang="en">EN</button>
+    <button data-lang="ar">AR</button>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar solid" id="navbar">
+  <a href="home.html" class="nav-logo">Bumble<span>bee</span></a>
+  <ul class="nav-links">
+    <li><a href="home.html">Accueil</a></li>
+    <li><a href="menu.html">Menu</a></li>
+    <li><a href="hookah.html">Chicha</a></li>
+    <li><a href="reservation.html" class="active">Réservation</a></li>
+    <li><a href="contact.html">Contact</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-nav">
+      <button data-lang="fr">FR</button>
+      <button data-lang="en">EN</button>
+      <button data-lang="ar">AR</button>
+    </div>
+    <a href="order.html" class="nav-cta">Commander</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <span class="page-label" id="pg-label">Bumblebee Lounge</span>
+  <h1 class="page-title" id="pg-title">Réservez votre <em>table.</em></h1>
+  <p class="page-desc" id="pg-desc">Choisissez votre date et votre heure. Nous confirmerons votre réservation via WhatsApp.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="resa-layout">
+
+  <!-- LEFT -->
+  <div>
+    <!-- MATCHES -->
+    <div class="matches-section reveal">
+      <h2 class="matches-title" id="m-title">Matchs disponibles</h2>
+      <p class="matches-sub" id="m-sub">Sélectionnez un match pour votre soirée (optionnel · +100 DA · offert si chicha commandée)</p>
+      <div id="matches-container">
+        <div class="no-matches" id="no-matches">Aucun match programmé pour le moment.<br>Revenez bientôt !</div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="reveal">
+      <h2 class="form-title" id="f-title">Vos informations</h2>
+      <p class="form-sub" id="f-sub">Remplissez le formulaire ci-dessous</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" id="l-name">Nom complet</label>
+          <input type="text" class="form-input" id="inp-name" placeholder="Votre nom"/>
+          <span class="form-error hidden" id="err-name">Nom requis</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-phone">WhatsApp / Téléphone</label>
+          <input type="tel" class="form-input" id="inp-phone" placeholder="+213 ..."/>
+          <span class="form-error hidden" id="err-phone">Numéro invalide</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-date">Date</label>
+          <input type="date" class="form-input" id="inp-date"/>
+          <span class="form-error hidden" id="err-date">Date requise</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-time">Heure</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="inp-time">
+              <option value="">Choisir</option>
+              <option>12:00</option><option>13:00</option><option>14:00</option>
+              <option>15:00</option><option>16:00</option><option>17:00</option>
+              <option>18:00</option><option>19:00</option><option>20:00</option>
+              <option>21:00</option><option>22:00</option><option>23:00</option>
+              <option>00:00</option>
+            </select>
+          </div>
+          <span class="form-error hidden" id="err-time">Heure requise</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-guests">Personnes</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="inp-guests">
+              <option value="">Nombre</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6+</option>
+            </select>
+          </div>
+          <span class="form-error hidden" id="err-guests">Requis</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-hookah">Chicha (optionnel)</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="inp-hookah">
+              <option value="">Choisir</option>
+              <option>Pomme — 400 DA</option>
+              <option>Menthe — 400 DA</option>
+              <option>Les deux</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitReservation()">
+        <span id="btn-txt">Confirmer la réservation</span>
+        <span>→</span>
+      </button>
+      <p class="submit-note" id="submit-note">Confirmation via WhatsApp · Paiement cash sur place</p>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-card reveal">
+      <div class="sidebar-title">Informations</div>
+      <div class="sidebar-item">
+        <span class="si-icon">🕐</span>
+        <div><div class="si-label" id="si-hours-label">Horaires</div><div class="si-val">Tous les jours · 12:00 — 01:00</div></div>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">📍</span>
+        <div><div class="si-label" id="si-addr-label">Adresse</div><div class="si-val">M69W+792, Djelfa, Algérie</div></div>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🪄</span>
+        <div><div class="si-label" id="si-chicha-label">Chicha</div><div class="si-val">Pomme & Menthe · 400 DA</div></div>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">✅</span>
+        <div><div class="si-label" id="si-confirm-label">Confirmation</div><div class="si-val" id="si-confirm-val">Via WhatsApp sous 30 min</div></div>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">💵</span>
+        <div><div class="si-label" id="si-pay-label">Paiement</div><div class="si-val" id="si-pay-val">Cash uniquement · Sur place</div></div>
+      </div>
+    </div>
+    <a href="https://wa.me/213778097833" target="_blank" class="whatsapp-btn">
+      💬 <span id="wa-btn">Réserver via WhatsApp</span>
+    </a>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon">✅</div>
+    <h2 class="modal-title" id="modal-title">Réservation envoyée !</h2>
+    <p class="modal-desc" id="modal-desc">Votre demande a été enregistrée. Vous allez recevoir une confirmation sur WhatsApp.</p>
+    <div class="modal-details" id="modal-details"></div>
+    <button class="modal-close" id="modal-close" onclick="closeModal()">Parfait →</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">Bumble<span>bee</span></div>
+  <div class="footer-copy">© 2025 Bumblebee Lounge · Djelfa, Algérie</div>
+  <div class="footer-links">
+    <a href="https://wa.me/213778097833" target="_blank">WhatsApp</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</footer>
+
+<script type="module">
+import { db } from '../firebase-config.js';
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// TRANSITION IN
+window.addEventListener('load', () => {
+  const o = document.getElementById('bb-transition'), l = document.getElementById('bb-transition-logo');
+  setTimeout(() => { o.style.opacity='0'; l.style.opacity='0'; setTimeout(()=>o.style.pointerEvents='none',400); }, 150);
+});
+
+// TRANSITION OUT
+function goTo(href) {
+  const o=document.getElementById('bb-transition'),l=document.getElementById('bb-transition-logo');
+  o.style.pointerEvents='all'; o.style.opacity='1'; l.style.opacity='1';
+  setTimeout(()=>window.location.href=href,500);
+}
+document.addEventListener('click', e => {
+  const link=e.target.closest('a');
+  if(!link) return;
+  const href=link.getAttribute('href');
+  if(!href||href.startsWith('#')||href.startsWith('http')||href.startsWith('tel')||link.target==='_blank') return;
+  e.preventDefault(); goTo(href);
+});
+
+// CURSOR
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+if(cur) document.addEventListener('mousemove',e=>{
+  cur.style.left=e.clientX+'px'; cur.style.top=e.clientY+'px';
+  setTimeout(()=>{ring.style.left=e.clientX+'px'; ring.style.top=e.clientY+'px';},80);
+});
+
+// HAMBURGER
+const ham=document.getElementById('hamburger'),drawer=document.getElementById('mobileDrawer');
+ham.addEventListener('click',()=>{ham.classList.toggle('open');drawer.classList.toggle('open');document.body.style.overflow=drawer.classList.contains('open')?'hidden':'';});
+drawer.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{ham.classList.remove('open');drawer.classList.remove('open');document.body.style.overflow='';}));
+
+// REVEAL
+const obs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')}),{threshold:.08});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>obs.observe(el));
+
+// MIN DATE
+document.getElementById('inp-date').min=new Date().toISOString().split('T')[0];
+
+// LOAD MATCHES FROM FIREBASE
+let selectedMatch=null;
+const matchQ=query(collection(db,'matches'),orderBy('date','asc'));
+onSnapshot(matchQ, snap => {
+  const container=document.getElementById('matches-container');
+  const noMsg=document.getElementById('no-matches');
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()}));
+  // Remove old match cards
+  container.querySelectorAll('.match-card').forEach(el=>el.remove());
+  if(matches.length===0){noMsg.style.display='block';return;}
+  noMsg.style.display='none';
+  matches.forEach(m=>{
+    const div=document.createElement('div');
+    div.className='match-card';
+    div.innerHTML=`
+      <span class="match-badge">${m.competition||'Match'}</span>
+      <span class="match-teams">${m.teams}</span>
+      <div class="match-info">
+        <div class="match-date">${m.date}</div>
+        <div class="match-time-val">${m.time}</div>
+        <div class="match-fee">+100 DA</div>
+      </div>`;
+    div.addEventListener('click',()=>{
+      document.querySelectorAll('.match-card').forEach(x=>x.classList.remove('selected'));
+      if(selectedMatch===m.id){selectedMatch=null;}
+      else{div.classList.add('selected');selectedMatch=m.id;}
+    });
+    container.insertBefore(div,noMsg);
+  });
+});
+
+// SUBMIT
+window.submitReservation = async function() {
+  const name=document.getElementById('inp-name').value.trim();
+  const phone=document.getElementById('inp-phone').value.trim();
+  const date=document.getElementById('inp-date').value;
+  const time=document.getElementById('inp-time').value;
+  const guests=document.getElementById('inp-guests').value;
+  const hookah=document.getElementById('inp-hookah').value;
+
+  // Validate
+  let valid=true;
+  const show=(id,msg)=>{const el=document.getElementById(id);el.textContent=msg;el.classList.remove('hidden');valid=false;};
+  const hide=id=>document.getElementById(id).classList.add('hidden');
+  hide('err-name');hide('err-phone');hide('err-date');hide('err-time');hide('err-guests');
+  if(!name||name.length<2) show('err-name','Nom requis (min 2 caractères)');
+  if(!phone||phone.replace(/\s/g,'').length<9) show('err-phone','Numéro invalide');
+  if(!date) show('err-date','Date requise');
+  if(!time) show('err-time','Heure requise');
+  if(!guests) show('err-guests','Requis');
+  if(!valid) return;
+
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>';
+
+  try {
+    const resId=`RES-${Math.floor(Math.random()*9000)+1000}`;
+    const reservation={
+      reservationId:resId,
+      clientName:name,
+      clientPhone:phone,
+      date,time,guests,
+      hookah:hookah||'—',
+      matchId:selectedMatch||null,
+      status:'pending',
+      createdAt:serverTimestamp()
+    };
+    await addDoc(collection(db,'reservations'),reservation);
+    reservation.createdAt=new Date().toISOString();
+
+    // Show modal
+    const rows=[
+      ['Réservation',resId],['Nom',name],['Téléphone',phone],
+      ['Date',date],['Heure',time],['Personnes',guests],
+      ['Chicha',hookah||'—']
+    ];
+    document.getElementById('modal-details').innerHTML=rows.map(([l,v])=>
+      `<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-val">${v}</span></div>`
+    ).join('');
+    document.getElementById('modal').classList.add('show');
+
+    // Send WhatsApp to client
+    const clientMsg=encodeURIComponent(
+`🐝 *BUMBLEBEE LOUNGE — Réservation*
+─────────────────
+📋 Réservation *${resId}*
+👤 ${name}
+📅 ${date} · ${time}
+👥 ${guests} personne(s)
+🪄 Chicha: ${hookah||'—'}
+─────────────────
+⏳ En attente de confirmation
+Notre équipe vous contactera bientôt.
+─────────────────
+📍 M69W+792, Djelfa
+🐝 Bumblebee Lounge`);
+    const cleanPhone=phone.replace(/\s/g,'').replace('+','');
+    setTimeout(()=>window.open(`https://wa.me/${cleanPhone}?text=${clientMsg}`,'_blank'),600);
+
+    // Send WhatsApp to owner
+    const ownerMsg=encodeURIComponent(
+`📥 *NOUVELLE RÉSERVATION*
+📋 ${resId} · ${name}
+📞 ${phone}
+📅 ${date} · ${time} · ${guests} pers.
+🪄 ${hookah||'—'}`);
+    setTimeout(()=>window.open(`https://wa.me/213778097833?text=${ownerMsg}`,'_blank'),1400);
+
+  } catch(err) {
+    alert('Erreur. Veuillez réessayer.');
+    console.error(err);
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='<span id="btn-txt">Confirmer la réservation</span><span>→</span>';
+  }
+};
+
+window.closeModal=()=>document.getElementById('modal').classList.remove('show');
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))window.closeModal();});
+
+// LANGUAGE
+const T={
+  fr:{
+    'pg-label':'Bumblebee Lounge','pg-title':'Réservez votre <em>table.</em>',
+    'pg-desc':'Choisissez votre date et votre heure. Confirmation via WhatsApp.',
+    'm-title':'Matchs disponibles','m-sub':'Sélectionnez un match (optionnel · +100 DA · offert si chicha commandée)',
+    'f-title':'Vos informations','f-sub':'Remplissez le formulaire ci-dessous',
+    'l-name':'Nom complet','l-phone':'WhatsApp / Téléphone','l-date':'Date',
+    'l-time':'Heure','l-guests':'Personnes','l-hookah':'Chicha (optionnel)',
+    'btn-txt':'Confirmer la réservation','submit-note':'Confirmation via WhatsApp · Paiement cash sur place',
+    'si-hours-label':'Horaires','si-addr-label':'Adresse','si-chicha-label':'Chicha',
+    'si-confirm-label':'Confirmation','si-confirm-val':'Via WhatsApp sous 30 min',
+    'si-pay-label':'Paiement','si-pay-val':'Cash uniquement · Sur place',
+    'wa-btn':'Réserver via WhatsApp',
+    'modal-title':'Réservation envoyée !','modal-desc':'Vous allez recevoir une confirmation sur WhatsApp.',
+    'modal-close':'Parfait →'
+  },
+  en:{
+    'pg-label':'Bumblebee Lounge','pg-title':'Reserve your <em>table.</em>',
+    'pg-desc':'Choose your date and time. We will confirm via WhatsApp.',
+    'm-title':'Available matches','m-sub':'Select a match (optional · +100 DA · free if hookah ordered)',
+    'f-title':'Your information','f-sub':'Fill in the form below',
+    'l-name':'Full name','l-phone':'WhatsApp / Phone','l-date':'Date',
+    'l-time':'Time','l-guests':'People','l-hookah':'Hookah (optional)',
+    'btn-txt':'Confirm reservation','submit-note':'Confirmation via WhatsApp · Cash payment on site',
+    'si-hours-label':'Hours','si-addr-label':'Address','si-chicha-label':'Hookah',
+    'si-confirm-label':'Confirmation','si-confirm-val':'Via WhatsApp within 30 min',
+    'si-pay-label':'Payment','si-pay-val':'Cash only · On site',
+    'wa-btn':'Reserve via WhatsApp',
+    'modal-title':'Reservation sent!','modal-desc':'You will receive a confirmation on WhatsApp.',
+    'modal-close':'Perfect →'
+  },
+  ar:{
+    'pg-label':'بامبلبي لاونج','pg-title':'احجز <em>طاولتك.</em>',
+    'pg-desc':'اختر تاريخك ووقتك. سنؤكد حجزك عبر واتساب.',
+    'm-title':'المباريات المتاحة','m-sub':'اختر مباراة (اختياري · +100 دج · مجاني مع الشيشة)',
+    'f-title':'معلوماتك','f-sub':'املأ النموذج أدناه',
+    'l-name':'الاسم الكامل','l-phone':'واتساب / هاتف','l-date':'التاريخ',
+    'l-time':'الوقت','l-guests':'الأشخاص','l-hookah':'الشيشة (اختياري)',
+    'btn-txt':'تأكيد الحجز','submit-note':'تأكيد عبر واتساب · الدفع نقداً في المكان',
+    'si-hours-label':'أوقات العمل','si-addr-label':'العنوان','si-chicha-label':'الشيشة',
+    'si-confirm-label':'التأكيد','si-confirm-val':'عبر واتساب خلال 30 دقيقة',
+    'si-pay-label':'الدفع','si-pay-val':'نقداً فقط · في المكان',
+    'wa-btn':'احجز عبر واتساب',
+    'modal-title':'تم إرسال الحجز!','modal-desc':'ستتلقى تأكيداً على واتساب.',
+    'modal-close':'ممتاز ←'
+  }
+};
+function setLang(l){
+  localStorage.setItem('bb_lang',l);
+  document.body.style.direction=l==='ar'?'rtl':'ltr';
+  document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));
+  const t=T[l]||T.fr;
+  for(const[id,v]of Object.entries(t)){const el=document.getElementById(id);if(el)el.innerHTML=v;}
+}
+const saved=localStorage.getItem('bb_lang');
+if(saved&&T[saved])setLang(saved);
+document.querySelectorAll('[data-lang]').forEach(btn=>btn.addEventListener('click',()=>setLang(btn.dataset.lang)));
+</script>
+</body>
+</html>

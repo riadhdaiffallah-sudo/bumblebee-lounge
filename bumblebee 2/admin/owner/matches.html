@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bumblebee — Matchs</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../admin.css"/>
+<style>
+/* API KEY SETUP */
+.api-setup{background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.2);padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.api-setup.connected{background:rgba(37,211,102,.04);border-color:rgba(37,211,102,.2)}
+.api-icon{font-size:1.8rem;flex-shrink:0}
+.api-info{flex:1}
+.api-title{font-size:.58rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.api-title.connected{color:#25d366}
+.api-desc{font-size:.6rem;color:var(--gray);letter-spacing:.06em;line-height:1.6}
+.api-input-wrap{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.api-input{background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--white);padding:11px 16px;font-family:'Montserrat',sans-serif;font-size:.62rem;outline:none;transition:border-color .3s;width:320px;letter-spacing:.05em}
+.api-input:focus{border-color:rgba(201,168,76,.4)}
+.api-btn{padding:11px 22px;background:var(--gold);border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:.54rem;font-weight:500;letter-spacing:.25em;text-transform:uppercase;transition:all .3s;white-space:nowrap}
+.api-btn:hover{background:var(--gold-light)}
+
+/* TEAMS FILTER */
+.teams-filter{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.team-btn{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--dark);border:1px solid var(--border);font-family:'Montserrat',sans-serif;font-size:.54rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gray);transition:all .3s}
+.team-btn:hover,.team-btn.active{border-color:rgba(201,168,76,.35);color:var(--gold);background:rgba(201,168,76,.06)}
+.team-logo{width:28px;height:28px;border-radius:50%;object-fit:contain;background:rgba(255,255,255,.05);padding:2px}
+.team-emoji{font-size:1.2rem}
+
+/* MATCHES GRID */
+.matches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:24px}
+@media(max-width:600px){.matches-grid{grid-template-columns:1fr}}
+
+.match-card{background:var(--dark);border:1px solid var(--border);padding:20px;transition:all .3s;position:relative;overflow:hidden}
+.match-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,.15),transparent)}
+.match-card:hover{border-color:rgba(201,168,76,.25);transform:translateY(-2px)}
+.match-card.featured{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.03)}
+.match-card.featured::before{background:linear-gradient(to right,transparent,rgba(201,168,76,.4),transparent)}
+
+.mc-competition{font-size:.46rem;letter-spacing:.32em;text-transform:uppercase;color:var(--gray);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.mc-competition-badge{padding:3px 8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.15);color:var(--gold);font-size:.44rem;letter-spacing:.2em}
+
+.mc-teams{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.mc-team{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.mc-team-name{font-size:.58rem;letter-spacing:.1em;text-align:center;color:var(--white);line-height:1.3}
+.mc-team-emoji{font-size:1.8rem}
+.mc-vs{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--gray);font-weight:300;flex-shrink:0}
+.mc-score{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:var(--gold);text-align:center;letter-spacing:.1em}
+
+.mc-info{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap;gap:8px}
+.mc-date{font-size:.56rem;color:var(--gray);letter-spacing:.1em}
+.mc-status{font-size:.46rem;letter-spacing:.22em;text-transform:uppercase;padding:4px 10px}
+.status-scheduled{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#60a5fa}
+.status-live{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);color:#25d366;animation:livePulse 2s infinite}
+.status-finished{background:rgba(136,136,128,.1);border:1px solid rgba(136,136,128,.2);color:var(--gray)}
+.status-postponed{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b}
+
+.mc-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.pin-btn{flex:1;padding:10px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;transition:all .3s}
+.pin-btn:hover{background:rgba(201,168,76,.2)}
+.pin-btn.pinned{background:var(--gold);color:var(--black)}
+.lineup-btn{padding:10px 14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);color:#60a5fa;font-family:'Montserrat',sans-serif;font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;transition:all .3s}
+.lineup-btn:hover{background:rgba(59,130,246,.15)}
+
+/* PINNED MATCHES */
+.pinned-section{margin-bottom:24px}
+.pinned-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.pinned-item{background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.2);padding:16px 20px;display:flex;align-items:center;gap:16px;transition:all .3s}
+.pinned-item:hover{border-color:rgba(201,168,76,.35)}
+.pi-teams{flex:1;font-size:.66rem;letter-spacing:.08em;color:var(--white)}
+.pi-date{font-size:.54rem;color:var(--gray);margin-top:3px;letter-spacing:.1em}
+.pi-comp{font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-top:2px}
+.unpin-btn{background:none;border:none;color:var(--gray);font-size:.8rem;transition:color .3s}
+.unpin-btn:hover{color:#e05252}
+
+/* LINEUP MODAL */
+.lineup-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
+.lineup-modal.show{display:flex}
+.lineup-box{background:var(--dark);border:1px solid rgba(201,168,76,.2);padding:32px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.lineup-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;color:var(--gold);margin-bottom:20px}
+.lineup-teams{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:480px){.lineup-teams{grid-template-columns:1fr}}
+.lineup-team-title{font-size:.52rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.lineup-player{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.62rem;color:var(--white)}
+.lineup-num{width:24px;height:24px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.52rem;color:var(--gold);flex-shrink:0}
+.lineup-pos{font-size:.48rem;color:var(--gray);letter-spacing:.1em;margin-left:auto}
+.lineup-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--gray);font-size:1.2rem;transition:color .3s}
+.lineup-close:hover{color:var(--white)}
+.lineup-loading{text-align:center;padding:32px;color:var(--gray);font-size:.6rem;letter-spacing:.15em}
+
+/* LOADING */
+.matches-loading{text-align:center;padding:48px;color:var(--gray)}
+.matches-loading .spinner{width:32px;height:32px;border-width:3px;margin:0 auto 16px}
+.matches-loading p{font-size:.6rem;letter-spacing:.2em}
+</style>
+</head>
+<body>
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="toast" id="toast"></div>
+
+<!-- LINEUP MODAL -->
+<div class="lineup-modal" id="lineupModal">
+  <div class="lineup-box">
+    <button class="lineup-close" onclick="closeLineup()">✕</button>
+    <div class="lineup-title" id="lineup-title">Compositions</div>
+    <div id="lineup-content"></div>
+  </div>
+</div>
+
+<div class="admin-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo">Bumble<span>bee</span></div>
+      <div class="role-badge">👑 Propriétaire</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon">📊</span>Dashboard</a>
+      <a class="nav-item" href="orders.html"><span class="nav-icon">🧾</span>Commandes</a>
+      <a class="nav-item" href="reservations.html"><span class="nav-icon">📅</span>Réservations</a>
+      <div class="nav-section">Gestion</div>
+      <a class="nav-item" href="inventory.html"><span class="nav-icon">📦</span>Inventaire</a>
+      <a class="nav-item active" href="matches.html"><span class="nav-icon">⚽</span>Matchs</a>
+      <a class="nav-item" href="customers.html"><span class="nav-icon">👥</span>Clients</a>
+      <a class="nav-item" href="staff.html"><span class="nav-icon">👤</span>Personnel</a>
+      <a class="nav-item" href="archive.html"><span class="nav-icon">🗂️</span>Archives</a>
+      <div class="nav-section">Site</div>
+      <a class="nav-item" href="../../public/home.html" target="_blank"><span class="nav-icon">🌐</span>Voir le site</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">🚪 Déconnexion</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="main-header">
+      <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+      <h1>Matchs <em>à diffuser</em></h1>
+      <div class="header-actions">
+        <button class="action-btn gold" onclick="fetchMatches()" id="refresh-btn">🔄 Actualiser</button>
+      </div>
+    </header>
+
+    <div class="main-body">
+
+      <!-- API KEY SETUP -->
+      <div class="api-setup" id="api-setup">
+        <div class="api-icon">🔑</div>
+        <div class="api-info">
+          <div class="api-title">Clé API Football-Data.org requise</div>
+          <div class="api-desc">Inscrivez-vous gratuitement sur <strong style="color:var(--gold)">football-data.org</strong> → obtenez votre clé API gratuite → collez-la ici.</div>
+          <div class="api-input-wrap">
+            <input type="text" class="api-input" id="api-key-input" placeholder="Collez votre clé API ici..."/>
+            <button class="api-btn" onclick="saveApiKey()">✅ Connecter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PINNED MATCHES (shown on reservation page) -->
+      <div class="pinned-section">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">📌 Matchs <em>épinglés</em> <span style="font-size:.52rem;color:var(--gray);letter-spacing:.1em;font-family:'Montserrat',sans-serif">— affichés sur la page réservation</span></div>
+          </div>
+          <div style="padding:16px" id="pinned-list">
+            <div class="empty-state"><div class="empty-icon">📌</div><div class="empty-msg">Aucun match épinglé.<br>Épinglez des matchs ci-dessous pour les afficher aux clients.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEAM FILTER -->
+      <div class="teams-filter">
+        <button class="team-btn active" onclick="filterTeam('all',this)"><span class="team-emoji">⚽</span> Tous</button>
+        <button class="team-btn" onclick="filterTeam('fcb',this)"><span class="team-emoji">🔵🔴</span> FC Barcelone</button>
+        <button class="team-btn" onclick="filterTeam('rm',this)"><span class="team-emoji">⚪</span> Real Madrid</button>
+        <button class="team-btn" onclick="filterTeam('algeria',this)"><span class="team-emoji">🇩🇿</span> Algérie</button>
+      </div>
+
+      <!-- MATCHES LIST -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Prochains <em>matchs</em></div>
+          <div id="match-count" style="font-size:.54rem;color:var(--gray);letter-spacing:.1em"></div>
+        </div>
+        <div style="padding:16px">
+          <div id="matches-container">
+            <div class="matches-loading">
+              <div class="spinner"></div>
+              <p>Entrez votre clé API pour charger les matchs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from '../../firebase-config.js';
+import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { doc, getDoc, setDoc, collection, onSnapshot, addDoc, deleteDoc, getDocs, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href = '../login.html'; return; }
+  const snap = await getDoc(doc(db,'users',user.uid));
+  if (!snap.exists() || snap.data().role !== 'owner') window.location.href = '../login.html';
+  loadApiKey();
+  loadPinned();
+});
+
+window.openSidebar=()=>{document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show');};
+window.closeSidebar=()=>{document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');};
+window.doLogout=async()=>{await signOut(auth);window.location.href='../login.html';};
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// Teams config
+const TEAMS = {
+  fcb:    { id: 81,  name: 'FC Barcelone',  emoji: '🔵🔴', competition: 'La Liga' },
+  rm:     { id: 86,  name: 'Real Madrid',   emoji: '⚪',   competition: 'La Liga' },
+  algeria:{ id: 1580,name: 'Algérie',       emoji: '🇩🇿',  competition: 'International' }
+};
+
+let apiKey = '';
+let allMatches = [];
+let pinnedIds = new Set();
+let currentFilter = 'all';
+
+// ─── API KEY ───
+async function loadApiKey() {
+  const snap = await getDoc(doc(db,'settings','footballApi'));
+  if (snap.exists() && snap.data().key) {
+    apiKey = snap.data().key;
+    showConnected();
+    fetchMatches();
+  }
+}
+
+window.saveApiKey = async function() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { showToast('⚠️ Entrez une clé API'); return; }
+  await setDoc(doc(db,'settings','footballApi'), { key });
+  apiKey = key;
+  showConnected();
+  fetchMatches();
+  showToast('✅ Clé API enregistrée !');
+};
+
+function showConnected() {
+  const box = document.getElementById('api-setup');
+  box.classList.add('connected');
+  box.innerHTML = `
+    <div class="api-icon">✅</div>
+    <div class="api-info">
+      <div class="api-title connected">API Football-Data.org connectée</div>
+      <div class="api-desc">Données en direct pour FC Barcelone, Real Madrid et l'Algérie. <button onclick="resetKey()" style="background:none;border:none;color:var(--gold);font-family:'Montserrat',sans-serif;font-size:.56rem;letter-spacing:.15em;cursor:pointer;text-decoration:underline">Changer la clé</button></div>
+    </div>`;
+}
+
+window.resetKey = async function() {
+  await setDoc(doc(db,'settings','footballApi'),{key:''});
+  apiKey='';
+  window.location.reload();
+};
+
+// ─── FETCH MATCHES ───
+window.fetchMatches = async function() {
+  if (!apiKey) { showToast('⚠️ Entrez votre clé API'); return; }
+  const btn = document.getElementById('refresh-btn');
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block"></div>';
+  btn.disabled = true;
+
+  const container = document.getElementById('matches-container');
+  container.innerHTML = '<div class="matches-loading"><div class="spinner"></div><p>Chargement des matchs...</p></div>';
+
+  allMatches = [];
+
+  try {
+    // Fetch for all 3 teams
+    const fetches = await Promise.allSettled(
+      Object.entries(TEAMS).map(async ([key, team]) => {
+        const res = await fetch(
+          `https://api.football-data.org/v4/teams/${team.id}/matches?status=SCHEDULED,LIVE,IN_PLAY,FINISHED&limit=10`,
+          { headers: { 'X-Auth-Token': apiKey } }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return (data.matches || []).map(m => ({ ...m, _teamKey: key, _teamEmoji: team.emoji }));
+      })
+    );
+
+    fetches.forEach(result => {
+      if (result.status === 'fulfilled') allMatches.push(...result.value);
+    });
+
+    // Sort by date
+    allMatches.sort((a,b) => new Date(a.utcDate) - new Date(b.utcDate));
+    renderMatches();
+    document.getElementById('match-count').textContent = `${allMatches.length} match(s) trouvé(s)`;
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-msg">Erreur de chargement.<br>Vérifiez votre clé API.</div></div>`;
+    showToast('❌ Erreur API: ' + err.message);
+  }
+
+  btn.innerHTML = '🔄 Actualiser';
+  btn.disabled = false;
+};
+
+window.filterTeam = function(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMatches();
+};
+
+function renderMatches() {
+  const filtered = currentFilter === 'all' ? allMatches : allMatches.filter(m => m._teamKey === currentFilter);
+  const container = document.getElementById('matches-container');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚽</div><div class="empty-msg">Aucun match trouvé.</div></div>';
+    return;
+  }
+  container.innerHTML = `<div class="matches-grid">${filtered.map(m => matchCard(m)).join('')}</div>`;
+}
+
+function matchCard(m) {
+  const home = m.homeTeam?.shortName || m.homeTeam?.name || '—';
+  const away = m.awayTeam?.shortName || m.awayTeam?.name || '—';
+  const date = new Date(m.utcDate);
+  const dateStr = date.toLocaleDateString('fr-DZ', { weekday:'short', day:'numeric', month:'short' });
+  const timeStr = date.toLocaleTimeString('fr-DZ', { hour:'2-digit', minute:'2-digit' });
+  const competition = m.competition?.name || '—';
+  const status = m.status;
+  const isLive = status === 'IN_PLAY' || status === 'LIVE';
+  const isFinished = status === 'FINISHED';
+  const scoreHome = m.score?.fullTime?.home ?? '—';
+  const scoreAway = m.score?.fullTime?.away ?? '—';
+  const isPinned = pinnedIds.has(String(m.id));
+
+  const statusLabel = { SCHEDULED:'Programmé', IN_PLAY:'🔴 En direct', LIVE:'🔴 En direct', FINISHED:'Terminé', POSTPONED:'Reporté' };
+  const statusClass = { SCHEDULED:'status-scheduled', IN_PLAY:'status-live', LIVE:'status-live', FINISHED:'status-finished', POSTPONED:'status-postponed' };
+
+  return `<div class="match-card ${isPinned?'featured':''}">
+    <div class="mc-competition">
+      ${m._teamEmoji}
+      <span class="mc-competition-badge">${competition}</span>
+    </div>
+    <div class="mc-teams">
+      <div class="mc-team">
+        <div class="mc-team-emoji">🏟️</div>
+        <div class="mc-team-name">${home}</div>
+      </div>
+      <div style="text-align:center">
+        ${isFinished||isLive
+          ? `<div class="mc-score">${scoreHome} — ${scoreAway}</div>`
+          : `<div class="mc-vs">VS</div><div style="font-size:.56rem;color:var(--gold);letter-spacing:.1em;margin-top:4px">${timeStr}</div>`
+        }
+      </div>
+      <div class="mc-team">
+        <div class="mc-team-emoji">🏟️</div>
+        <div class="mc-team-name">${away}</div>
+      </div>
+    </div>
+    <div class="mc-info">
+      <span class="mc-date">📅 ${dateStr} · ${timeStr}</span>
+      <span class="mc-status ${statusClass[status]||'status-scheduled'}">${statusLabel[status]||status}</span>
+    </div>
+    <div class="mc-actions">
+      <button class="pin-btn ${isPinned?'pinned':''}" onclick="togglePin(${m.id},'${home}','${away}','${dateStr}','${timeStr}','${competition}','${m._teamEmoji}')">
+        ${isPinned?'📌 Épinglé':'📌 Épingler pour clients'}
+      </button>
+      <button class="lineup-btn" onclick="showLineup(${m.id},'${home} vs ${away}')">👥 Compo</button>
+    </div>
+  </div>`;
+}
+
+// ─── PINNED ───
+async function loadPinned() {
+  onSnapshot(collection(db,'featured_matches'), snap => {
+    pinnedIds.clear();
+    const pins = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    pins.forEach(p => pinnedIds.add(String(p.matchId)));
+    renderPinned(pins);
+    renderMatches();
+  });
+}
+
+function renderPinned(pins) {
+  const el = document.getElementById('pinned-list');
+  if (pins.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-msg">Aucun match épinglé.<br>Épinglez des matchs ci-dessous pour les afficher aux clients.</div></div>';
+    return;
+  }
+  el.innerHTML = `<div class="pinned-grid">${pins.map(p => `
+    <div class="pinned-item">
+      <div style="font-size:1.4rem">${p.emoji||'⚽'}</div>
+      <div style="flex:1">
+        <div class="pi-teams">${p.home} vs ${p.away}</div>
+        <div class="pi-date">📅 ${p.date} · ${p.time}</div>
+        <div class="pi-comp">${p.competition}</div>
+      </div>
+      <button class="unpin-btn" onclick="unpinMatch('${p.id}')">✕</button>
+    </div>`).join('')}</div>`;
+}
+
+window.togglePin = async function(id, home, away, date, time, competition, emoji) {
+  const existing = [];
+  const snap = await getDocs(collection(db,'featured_matches'));
+  snap.forEach(d => { if(String(d.data().matchId)===String(id)) existing.push(d.id); });
+  if (existing.length > 0) {
+    await Promise.all(existing.map(docId => deleteDoc(doc(db,'featured_matches',docId))));
+    showToast('📌 Match retiré');
+  } else {
+    await addDoc(collection(db,'featured_matches'), { matchId:String(id), home, away, date, time, competition, emoji, createdAt: new Date().toISOString() });
+    showToast('📌 Match épinglé ! Visible sur la page réservation.');
+  }
+};
+
+window.unpinMatch = async function(docId) {
+  await deleteDoc(doc(db,'featured_matches',docId));
+  showToast('📌 Match retiré');
+};
+
+// ─── LINEUPS ───
+window.showLineup = async function(matchId, title) {
+  document.getElementById('lineup-title').textContent = '👥 ' + title;
+  document.getElementById('lineup-content').innerHTML = '<div class="lineup-loading"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des compositions...</div>';
+  document.getElementById('lineupModal').classList.add('show');
+
+  try {
+    const res = await fetch(
+      `https://api.football-data.org/v4/matches/${matchId}`,
+      { headers: { 'X-Auth-Token': apiKey } }
+    );
+    const data = await res.json();
+    const lineups = data.lineups;
+
+    if (!lineups || lineups.length === 0) {
+      document.getElementById('lineup-content').innerHTML = `
+        <div class="empty-state" style="padding:20px 0">
+          <div class="empty-icon">⏳</div>
+          <div class="empty-msg">Compositions non disponibles.<br>Elles apparaissent quelques heures avant le match.</div>
+        </div>`;
+      return;
+    }
+
+    document.getElementById('lineup-content').innerHTML = `
+      <div class="lineup-teams">
+        ${lineups.map(team => `
+          <div>
+            <div class="lineup-team-title">${team.team?.name || '—'}</div>
+            ${(team.startXI||[]).map(p => `
+              <div class="lineup-player">
+                <div class="lineup-num">${p.player?.shirtNumber||'—'}</div>
+                <span>${p.player?.name||'—'}</span>
+                <span class="lineup-pos">${p.player?.position||''}</span>
+              </div>`).join('')}
+            ${team.substitutes?.length ? `
+              <div style="font-size:.48rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gray);margin:12px 0 8px;padding-top:8px;border-top:1px solid var(--border)">Remplaçants</div>
+              ${team.substitutes.map(p => `
+                <div class="lineup-player" style="opacity:.6">
+                  <div class="lineup-num" style="background:rgba(136,136,128,.1);border-color:rgba(136,136,128,.2);color:var(--gray)">${p.player?.shirtNumber||'—'}</div>
+                  <span>${p.player?.name||'—'}</span>
+                </div>`).join('')}` : ''}
+          </div>`).join('')}
+      </div>`;
+  } catch(err) {
+    document.getElementById('lineup-content').innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-msg">Erreur de chargement.</div></div>`;
+  }
+};
+
+window.closeLineup = () => document.getElementById('lineupModal').classList.remove('show');
+document.getElementById('lineupModal').addEventListener('click', e => { if(e.target===document.getElementById('lineupModal')) window.closeLineup(); });
+</script>
+</body>
+</html>

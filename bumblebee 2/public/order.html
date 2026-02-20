@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bumblebee — Commander</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/theme.css"/>
+<style>
+#bb-transition{position:fixed;inset:0;z-index:99999;background:#050505;pointer-events:none;opacity:1;transition:opacity .4s ease;display:flex;align-items:center;justify-content:center}
+#bb-transition-logo{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;letter-spacing:.4em;color:#c9a84c;opacity:1;transition:opacity .3s ease}
+
+/* LAYOUT */
+.order-layout{display:grid;grid-template-columns:1fr 360px;gap:48px;max-width:1200px;margin:0 auto;padding:80px var(--px) 120px;align-items:start}
+@media(max-width:960px){.order-layout{grid-template-columns:1fr}}
+
+/* MENU ITEMS */
+.order-category{margin-bottom:52px}
+.order-cat-title{font-family:'Cormorant Garamond',serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:300;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.order-cat-title em{color:var(--gold);font-style:italic}
+.order-cat-line{flex:1;height:1px;background:linear-gradient(to right,var(--border),transparent)}
+
+.order-items{display:flex;flex-direction:column;gap:2px}
+.order-item{display:flex;align-items:center;gap:16px;padding:16px 20px;border:1px solid var(--border);transition:all .3s;background:rgba(255,255,255,.015)}
+.order-item:hover{border-color:rgba(201,168,76,.22);background:rgba(201,168,76,.03)}
+.order-item-name{flex:1;font-size:.72rem;letter-spacing:.07em;color:var(--white)}
+.order-item-sub{font-size:.54rem;color:var(--gray);letter-spacing:.1em;margin-top:2px}
+.order-item-price{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--gold);white-space:nowrap;margin-right:8px}
+.order-item-price .da{font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;margin-left:3px;color:var(--gray)}
+.qty-controls{display:flex;align-items:center;gap:0;border:1px solid var(--border)}
+.qty-btn{width:32px;height:32px;background:none;border:none;color:var(--gold);font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .3s;font-family:'Montserrat',sans-serif}
+.qty-btn:hover{background:rgba(201,168,76,.1)}
+.qty-num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.68rem;color:var(--white);border-left:1px solid var(--border);border-right:1px solid var(--border)}
+
+/* SIDEBAR / ORDER SUMMARY */
+.order-sidebar{position:sticky;top:100px}
+@media(max-width:960px){.order-sidebar{position:static}}
+.summary-card{background:rgba(201,168,76,.04);border:1px solid var(--border);padding:32px 28px}
+.summary-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;color:var(--gold);margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.summary-items{min-height:80px;margin-bottom:20px}
+.summary-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.62rem;letter-spacing:.06em}
+.summary-item-name{color:var(--gray)}
+.summary-item-price{color:var(--white)}
+.summary-empty{text-align:center;padding:24px 0;color:var(--gray);font-size:.6rem;letter-spacing:.15em;line-height:1.8}
+.summary-total{display:flex;justify-content:space-between;align-items:baseline;padding:16px 0;border-top:1px solid rgba(201,168,76,.2);margin-top:8px}
+.summary-total-label{font-size:.56rem;letter-spacing:.32em;text-transform:uppercase;color:var(--gray)}
+.summary-total-val{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--gold);font-weight:300}
+.summary-total-da{font-size:.6rem;color:var(--gray);letter-spacing:.2em;text-transform:uppercase;margin-left:4px}
+
+/* CLIENT INFO */
+.client-form{margin-top:20px;display:flex;flex-direction:column;gap:14px}
+.checkout-btn{width:100%;padding:17px;background:var(--gold);border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:500;letter-spacing:.35em;text-transform:uppercase;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
+.checkout-btn:hover{background:var(--gold-light)}
+.checkout-btn:disabled{opacity:.6;cursor:not-allowed}
+.cash-note-box{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.15);margin-top:12px;font-size:.56rem;color:var(--gray);letter-spacing:.1em;line-height:1.6}
+.cash-note-box span{color:var(--gold);font-size:.9rem}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px);padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--dark);border:1px solid rgba(201,168,76,.2);padding:40px 32px;max-width:500px;width:100%;animation:modalIn .4s ease;text-align:center;max-height:90vh;overflow-y:auto}
+.modal-icon{font-size:3rem;margin-bottom:16px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:300;color:var(--gold);margin-bottom:12px}
+.modal-desc{font-size:.62rem;color:var(--gray);line-height:1.8;margin-bottom:24px;letter-spacing:.04em}
+.receipt-box{background:rgba(0,0,0,.4);border:1px solid var(--border);padding:24px;margin-bottom:24px;text-align:left;font-family:'Montserrat',sans-serif}
+.receipt-header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.receipt-logo{font-family:'Cormorant Garamond',serif;font-size:1.2rem;letter-spacing:.3em;color:var(--gold)}
+.receipt-id{font-size:.52rem;color:var(--gray);letter-spacing:.2em;margin-top:4px}
+.receipt-row{display:flex;justify-content:space-between;padding:6px 0;font-size:.6rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.receipt-row:last-child{border-bottom:none}
+.receipt-row .label{color:var(--gray)}
+.receipt-row .val{color:var(--white)}
+.receipt-total-row{display:flex;justify-content:space-between;padding:12px 0 0;margin-top:8px;border-top:1px solid rgba(201,168,76,.2)}
+.receipt-total-row .label{font-size:.56rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gray)}
+.receipt-total-row .val{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--gold)}
+.receipt-status{text-align:center;margin-top:12px;padding:10px;background:rgba(229,57,53,.08);border:1px solid rgba(229,57,53,.2);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;color:#e05252}
+.modal-btns{display:flex;flex-direction:column;gap:10px}
+.modal-btn-wa{width:100%;padding:14px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);color:#25d366;font-family:'Montserrat',sans-serif;font-size:.58rem;letter-spacing:.28em;text-transform:uppercase;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px}
+.modal-btn-wa:hover{background:rgba(37,211,102,.2)}
+.modal-btn-close{width:100%;padding:14px;background:var(--gold);border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:.58rem;font-weight:500;letter-spacing:.28em;text-transform:uppercase;transition:all .3s}
+.modal-btn-close:hover{background:var(--gold-light)}
+
+@keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="bb-transition"><div id="bb-transition-logo">Bumble<em style="font-style:italic;color:#c9a84c">bee</em></div></div>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- DRAWER -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <a href="home.html">Accueil</a>
+  <a href="menu.html">Menu</a>
+  <a href="hookah.html">Chicha</a>
+  <a href="reservation.html">Réservation</a>
+  <a href="contact.html">Contact</a>
+  <a href="order.html" class="active drawer-cta">Commander</a>
+  <div class="drawer-langs">
+    <button data-lang="fr">FR</button>
+    <button data-lang="en">EN</button>
+    <button data-lang="ar">AR</button>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar solid" id="navbar">
+  <a href="home.html" class="nav-logo">Bumble<span>bee</span></a>
+  <ul class="nav-links">
+    <li><a href="home.html">Accueil</a></li>
+    <li><a href="menu.html">Menu</a></li>
+    <li><a href="hookah.html">Chicha</a></li>
+    <li><a href="reservation.html">Réservation</a></li>
+    <li><a href="contact.html">Contact</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-nav">
+      <button data-lang="fr">FR</button>
+      <button data-lang="en">EN</button>
+      <button data-lang="ar">AR</button>
+    </div>
+    <a href="order.html" class="nav-cta active">Commander</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <span class="page-label" id="pg-label">Bumblebee Lounge</span>
+  <h1 class="page-title" id="pg-title">Passez votre <em>commande.</em></h1>
+  <p class="page-desc" id="pg-desc">Choisissez vos articles et confirmez. Votre commande sera préparée immédiatement.</p>
+</div>
+
+<!-- ORDER LAYOUT -->
+<div class="order-layout">
+
+  <!-- LEFT: MENU ITEMS -->
+  <div>
+    <!-- CHICHA -->
+    <div class="order-category reveal">
+      <h2 class="order-cat-title">🪄 <em id="cat-chicha">Chicha</em> <div class="order-cat-line"></div></h2>
+      <div class="order-items">
+        <div class="order-item">
+          <div><div class="order-item-name" id="item-apple">Chicha Pomme Fraîche</div><div class="order-item-sub" id="sub-apple">Saveur signature · Session 45–60 min</div></div>
+          <div class="order-item-price">400<span class="da">DA</span></div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty('chicha-apple','Chicha Pomme',400,-1)">−</button>
+            <div class="qty-num" id="qty-chicha-apple">0</div>
+            <button class="qty-btn" onclick="changeQty('chicha-apple','Chicha Pomme',400,1)">+</button>
+          </div>
+        </div>
+        <div class="order-item">
+          <div><div class="order-item-name" id="item-mint">Chicha Menthe Fraîche</div><div class="order-item-sub" id="sub-mint">Saveur classique · Session 45–60 min</div></div>
+          <div class="order-item-price">400<span class="da">DA</span></div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty('chicha-mint','Chicha Menthe',400,-1)">−</button>
+            <div class="qty-num" id="qty-chicha-mint">0</div>
+            <button class="qty-btn" onclick="changeQty('chicha-mint','Chicha Menthe',400,1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRINKS -->
+    <div class="order-category reveal">
+      <h2 class="order-cat-title">🥤 <em id="cat-drinks">Boissons fraîches</em> <div class="order-cat-line"></div></h2>
+      <div class="order-items">
+        <div class="order-item"><div><div class="order-item-name">Selecto</div><div class="order-item-sub" id="sub-selecto">Boisson gazeuse</div></div><div class="order-item-price">100<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('selecto','Selecto',100,-1)">−</button><div class="qty-num" id="qty-selecto">0</div><button class="qty-btn" onclick="changeQty('selecto','Selecto',100,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Hamoud Boualem</div><div class="order-item-sub" id="sub-hamoud">Limonade algérienne</div></div><div class="order-item-price">80<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('hamoud','Hamoud Boualem',80,-1)">−</button><div class="qty-num" id="qty-hamoud">0</div><button class="qty-btn" onclick="changeQty('hamoud','Hamoud Boualem',80,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Mirinda</div><div class="order-item-sub" id="sub-mirinda">Orange / Citron</div></div><div class="order-item-price">80<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('mirinda','Mirinda',80,-1)">−</button><div class="qty-num" id="qty-mirinda">0</div><button class="qty-btn" onclick="changeQty('mirinda','Mirinda',80,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Coca-Cola</div><div class="order-item-sub" id="sub-coca">Classic</div></div><div class="order-item-price">80<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('coca','Coca-Cola',80,-1)">−</button><div class="qty-num" id="qty-coca">0</div><button class="qty-btn" onclick="changeQty('coca','Coca-Cola',80,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Fanta</div><div class="order-item-sub" id="sub-fanta">Orange gazeuse</div></div><div class="order-item-price">80<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('fanta','Fanta',80,-1)">−</button><div class="qty-num" id="qty-fanta">0</div><button class="qty-btn" onclick="changeQty('fanta','Fanta',80,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Izem</div><div class="order-item-sub" id="sub-izem">Boisson énergisante</div></div><div class="order-item-price">100<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('izem','Izem',100,-1)">−</button><div class="qty-num" id="qty-izem">0</div><button class="qty-btn" onclick="changeQty('izem','Izem',100,1)">+</button></div></div>
+      </div>
+    </div>
+
+    <!-- JUICE -->
+    <div class="order-category reveal">
+      <h2 class="order-cat-title">🧃 <em id="cat-juice">Jus de fruits</em> <div class="order-cat-line"></div></h2>
+      <div class="order-items">
+        <div class="order-item"><div><div class="order-item-name">Rouiba</div><div class="order-item-sub">Jus naturel</div></div><div class="order-item-price">120<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('rouiba','Rouiba',120,-1)">−</button><div class="qty-num" id="qty-rouiba">0</div><button class="qty-btn" onclick="changeQty('rouiba','Rouiba',120,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Ramy</div><div class="order-item-sub">Jus naturel</div></div><div class="order-item-price">120<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('ramy','Ramy',120,-1)">−</button><div class="qty-num" id="qty-ramy">0</div><button class="qty-btn" onclick="changeQty('ramy','Ramy',120,1)">+</button></div></div>
+      </div>
+    </div>
+
+    <!-- HOT -->
+    <div class="order-category reveal">
+      <h2 class="order-cat-title">☕ <em id="cat-hot">Boissons chaudes</em> <div class="order-cat-line"></div></h2>
+      <div class="order-items">
+        <div class="order-item"><div><div class="order-item-name" id="item-tea">Thé à la menthe</div><div class="order-item-sub">Traditionnel algérien</div></div><div class="order-item-price">80<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('tea','Thé menthe',80,-1)">−</button><div class="qty-num" id="qty-tea">0</div><button class="qty-btn" onclick="changeQty('tea','Thé menthe',80,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name" id="item-coffee">Café express</div><div class="order-item-sub">Café algérien fort</div></div><div class="order-item-price">60<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('coffee','Café express',60,-1)">−</button><div class="qty-num" id="qty-coffee">0</div><button class="qty-btn" onclick="changeQty('coffee','Café express',60,1)">+</button></div></div>
+      </div>
+    </div>
+
+    <!-- WATER -->
+    <div class="order-category reveal">
+      <h2 class="order-cat-title">💧 <em id="cat-water">Eau minérale</em> <div class="order-cat-line"></div></h2>
+      <div class="order-items">
+        <div class="order-item"><div><div class="order-item-name">Ifri</div><div class="order-item-sub">Eau minérale naturelle</div></div><div class="order-item-price">50<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('ifri','Eau Ifri',50,-1)">−</button><div class="qty-num" id="qty-ifri">0</div><button class="qty-btn" onclick="changeQty('ifri','Eau Ifri',50,1)">+</button></div></div>
+        <div class="order-item"><div><div class="order-item-name">Lalla Khedidja</div><div class="order-item-sub">Eau de source</div></div><div class="order-item-price">50<span class="da">DA</span></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('lalla','Lalla Khedidja',50,-1)">−</button><div class="qty-num" id="qty-lalla">0</div><button class="qty-btn" onclick="changeQty('lalla','Lalla Khedidja',50,1)">+</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: SUMMARY -->
+  <div class="order-sidebar">
+    <div class="summary-card reveal">
+      <div class="summary-title" id="sum-title">🧾 Votre commande</div>
+      <div class="summary-items" id="summary-items">
+        <div class="summary-empty" id="sum-empty">Aucun article sélectionné.<br>Ajoutez des articles à gauche.</div>
+      </div>
+      <div class="summary-total">
+        <span class="summary-total-label" id="sum-total-label">Total</span>
+        <span><span class="summary-total-val" id="sum-total">0</span><span class="summary-total-da">DA</span></span>
+      </div>
+
+      <!-- CLIENT INFO -->
+      <div class="client-form">
+        <div class="form-group">
+          <label class="form-label" id="l-name">Votre nom</label>
+          <input type="text" class="form-input" id="inp-name" placeholder="Nom complet"/>
+          <span class="form-error hidden" id="err-name">Nom requis</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="l-phone">WhatsApp</label>
+          <input type="tel" class="form-input" id="inp-phone" placeholder="+213 ..."/>
+          <span class="form-error hidden" id="err-phone">Numéro invalide</span>
+        </div>
+        <button class="checkout-btn" id="checkoutBtn" onclick="placeOrder()">
+          <span id="btn-txt">Confirmer la commande</span> →
+        </button>
+        <div class="cash-note-box">
+          <span>💵</span>
+          <span id="cash-note">Paiement cash uniquement · Sur place au lounge</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECEIPT -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon">🧾</div>
+    <h2 class="modal-title" id="modal-title">Commande confirmée !</h2>
+    <p class="modal-desc" id="modal-desc">Votre commande a été enregistrée. Un reçu va être envoyé sur WhatsApp.</p>
+    <div class="receipt-box" id="receipt-box"></div>
+    <div class="modal-btns">
+      <button class="modal-btn-wa" id="btn-wa-client" onclick="sendToClient()">💬 Recevoir mon reçu WhatsApp</button>
+      <button class="modal-btn-close" onclick="closeModal()" id="btn-close">Terminer →</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">Bumble<span>bee</span></div>
+  <div class="footer-copy">© 2025 Bumblebee Lounge · Djelfa, Algérie</div>
+  <div class="footer-links">
+    <a href="https://wa.me/213778097833" target="_blank">WhatsApp</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</footer>
+
+<script type="module">
+import { db } from '../firebase-config.js';
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// TRANSITION
+window.addEventListener('load',()=>{const o=document.getElementById('bb-transition'),l=document.getElementById('bb-transition-logo');setTimeout(()=>{o.style.opacity='0';l.style.opacity='0';setTimeout(()=>o.style.pointerEvents='none',400);},150);});
+function goTo(href){const o=document.getElementById('bb-transition'),l=document.getElementById('bb-transition-logo');o.style.pointerEvents='all';o.style.opacity='1';l.style.opacity='1';setTimeout(()=>window.location.href=href,500);}
+document.addEventListener('click',e=>{const link=e.target.closest('a');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('http')||href.startsWith('tel')||link.target==='_blank')return;e.preventDefault();goTo(href);});
+
+// CURSOR
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+if(cur)document.addEventListener('mousemove',e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';setTimeout(()=>{ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';},80);});
+
+// HAMBURGER
+const ham=document.getElementById('hamburger'),drawer=document.getElementById('mobileDrawer');
+ham.addEventListener('click',()=>{ham.classList.toggle('open');drawer.classList.toggle('open');document.body.style.overflow=drawer.classList.contains('open')?'hidden':'';});
+drawer.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{ham.classList.remove('open');drawer.classList.remove('open');document.body.style.overflow='';}));
+
+// REVEAL
+const obs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')}),{threshold:.08});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>obs.observe(el));
+
+// ORDER STATE
+let cart = {};
+let currentOrder = null;
+
+window.changeQty = function(id, name, price, delta) {
+  if(!cart[id]) cart[id]={id,name,price,qty:0};
+  cart[id].qty = Math.max(0, cart[id].qty + delta);
+  if(cart[id].qty === 0) delete cart[id];
+  // Update qty display
+  const qEl = document.getElementById('qty-'+id);
+  if(qEl) qEl.textContent = cart[id]?.qty || 0;
+  updateSummary();
+};
+
+function updateSummary(){
+  const items = Object.values(cart).filter(i=>i.qty>0);
+  const container = document.getElementById('summary-items');
+  const emptyEl = document.getElementById('sum-empty');
+  const totalEl = document.getElementById('sum-total');
+  let total = 0;
+  if(items.length===0){
+    container.innerHTML='';
+    container.appendChild(emptyEl||document.createElement('div'));
+    if(emptyEl) emptyEl.style.display='block';
+    totalEl.textContent='0';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display='none';
+  container.innerHTML = items.map(i=>{
+    const sub = i.price * i.qty;
+    total += sub;
+    return `<div class="summary-item"><span class="summary-item-name">${i.name} ×${i.qty}</span><span class="summary-item-price">${sub} DA</span></div>`;
+  }).join('');
+  totalEl.textContent = total;
+}
+
+// Pre-select flavor from URL
+const urlParams = new URLSearchParams(window.location.search);
+const flavor = urlParams.get('flavor');
+if(flavor==='apple') { window.changeQty('chicha-apple','Chicha Pomme',400,1); }
+else if(flavor==='mint') { window.changeQty('chicha-mint','Chicha Menthe',400,1); }
+
+// PLACE ORDER
+window.placeOrder = async function(){
+  const items = Object.values(cart).filter(i=>i.qty>0);
+  const name = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+
+  // Validate
+  let valid=true;
+  const show=(id,msg)=>{const el=document.getElementById(id);if(el){el.textContent=msg;el.classList.remove('hidden');}valid=false;};
+  const hide=id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');};
+  hide('err-name');hide('err-phone');
+  if(!name||name.length<2) show('err-name','Nom requis');
+  if(!phone||phone.replace(/\s/g,'').length<9) show('err-phone','Numéro invalide');
+  if(items.length===0){alert('Ajoutez au moins un article !');return;}
+  if(!valid) return;
+
+  const btn=document.getElementById('checkoutBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>';
+
+  try {
+    const orderId=`BB-${Math.floor(Math.random()*9000)+1000}`;
+    const total=items.reduce((s,i)=>s+i.price*i.qty,0);
+    const now=new Date();
+    const order={
+      orderId, clientName:name, clientPhone:phone,
+      items: items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty})),
+      total, paid:false, status:'pending', createdAt:serverTimestamp()
+    };
+    await addDoc(collection(db,'orders'),order);
+    currentOrder={...order, createdAt:now};
+
+    // Build receipt HTML
+    const dateStr=now.toLocaleDateString('fr-DZ');
+    const timeStr=now.toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'});
+    const itemsRows=items.map(i=>`<div class="receipt-row"><span class="label">${i.name} ×${i.qty}</span><span class="val">${i.price*i.qty} DA</span></div>`).join('');
+    document.getElementById('receipt-box').innerHTML=`
+      <div class="receipt-header">
+        <div class="receipt-logo">🐝 BUMBLEBEE LOUNGE</div>
+        <div class="receipt-id">Commande ${orderId} · ${dateStr} ${timeStr}</div>
+      </div>
+      ${itemsRows}
+      <div class="receipt-total-row"><span class="label">TOTAL</span><span class="val">${total} DA</span></div>
+      <div class="receipt-status">💵 NON PAYÉ · Cash sur place</div>`;
+
+    // Send to owner WhatsApp
+    const ownerText=encodeURIComponent(`📥 *NOUVELLE COMMANDE*\n\n🐝 *BUMBLEBEE LOUNGE*\n📋 Commande *${orderId}*\n👤 ${name}\n📞 ${phone}\n📅 ${dateStr} · ${timeStr}\n─────────────────\n${items.map(i=>`• ${i.name} ×${i.qty}     ${i.price*i.qty} DA`).join('\n')}\n─────────────────\n💰 *TOTAL: ${total} DA*\n💵 PAIEMENT: ❌ NON PAYÉ`);
+    setTimeout(()=>window.open(`https://wa.me/213778097833?text=${ownerText}`,'_blank'),600);
+
+    // Show modal
+    document.getElementById('modal').classList.add('show');
+    cart={};
+    Object.keys(cart).forEach(id=>{const el=document.getElementById('qty-'+id);if(el)el.textContent='0';});
+    document.querySelectorAll('.qty-num').forEach(el=>el.textContent='0');
+    updateSummary();
+
+  } catch(err){
+    alert('Erreur. Veuillez réessayer.');
+    console.error(err);
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='<span id="btn-txt">Confirmer la commande</span> →';
+  }
+};
+
+// SEND TO CLIENT
+window.sendToClient = function(){
+  if(!currentOrder) return;
+  const {orderId,clientName,clientPhone,items,total,createdAt}=currentOrder;
+  const dateStr=createdAt.toLocaleDateString('fr-DZ');
+  const timeStr=createdAt.toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'});
+  const text=encodeURIComponent(`🐝 *BUMBLEBEE LOUNGE*\n─────────────────\n📋 Commande *${orderId}*\n📅 ${dateStr} · ${timeStr}\n👤 ${clientName}\n─────────────────\n${items.map(i=>`• ${i.name} ×${i.qty}     ${i.price*i.qty} DA`).join('\n')}\n─────────────────\n💰 *TOTAL: ${total} DA*\n─────────────────\n💵 PAIEMENT: ❌ NON PAYÉ\n   Cash uniquement · Sur place\n─────────────────\nMerci de votre visite 🙏\n📍 M69W+792, Djelfa\n🐝 Bumblebee Lounge`);
+  const phone=clientPhone.replace(/\s/g,'').replace('+','');
+  window.open(`https://wa.me/${phone}?text=${text}`,'_blank');
+};
+
+window.closeModal=()=>{document.getElementById('modal').classList.remove('show');window.location.href='home.html';};
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))window.closeModal();});
+
+// LANGUAGE
+const T={
+  fr:{'pg-label':'Bumblebee Lounge','pg-title':'Passez votre <em>commande.</em>','pg-desc':'Choisissez vos articles et confirmez. Préparation immédiate.','cat-chicha':'Chicha','cat-drinks':'Boissons fraîches','cat-juice':'Jus de fruits','cat-hot':'Boissons chaudes','cat-water':'Eau minérale','item-apple':'Chicha Pomme Fraîche','sub-apple':'Saveur signature · Session 45–60 min','item-mint':'Chicha Menthe Fraîche','sub-mint':'Saveur classique · Session 45–60 min','sub-selecto':'Boisson gazeuse','sub-hamoud':'Limonade algérienne','sub-mirinda':'Orange / Citron','sub-coca':'Classic','sub-fanta':'Orange gazeuse','sub-izem':'Boisson énergisante','item-tea':'Thé à la menthe','item-coffee':'Café express','sum-title':'🧾 Votre commande','sum-total-label':'Total','l-name':'Votre nom','l-phone':'WhatsApp','btn-txt':'Confirmer la commande','cash-note':'Paiement cash uniquement · Sur place au lounge','modal-title':'Commande confirmée !','modal-desc':'Votre commande a été enregistrée. Un reçu va être envoyé sur WhatsApp.','btn-wa-client':'💬 Recevoir mon reçu WhatsApp','btn-close':'Terminer →'},
+  en:{'pg-label':'Bumblebee Lounge','pg-title':'Place your <em>order.</em>','pg-desc':'Choose your items and confirm. Immediate preparation.','cat-chicha':'Hookah','cat-drinks':'Cold drinks','cat-juice':'Fruit juices','cat-hot':'Hot drinks','cat-water':'Mineral water','item-apple':'Fresh Apple Hookah','sub-apple':'Signature flavor · 45–60 min session','item-mint':'Fresh Mint Hookah','sub-mint':'Classic flavor · 45–60 min session','sub-selecto':'Fizzy drink','sub-hamoud':'Algerian lemonade','sub-mirinda':'Orange / Lemon','sub-coca':'Classic','sub-fanta':'Orange fizzy','sub-izem':'Energy drink','item-tea':'Mint tea','item-coffee':'Espresso','sum-title':'🧾 Your order','sum-total-label':'Total','l-name':'Your name','l-phone':'WhatsApp','btn-txt':'Confirm order','cash-note':'Cash payment only · At the lounge','modal-title':'Order confirmed!','modal-desc':'Your order has been registered. A receipt will be sent on WhatsApp.','btn-wa-client':'💬 Get my WhatsApp receipt','btn-close':'Done →'},
+  ar:{'pg-label':'بامبلبي لاونج','pg-title':'أعطِ <em>طلبك.</em>','pg-desc':'اختر عناصرك وأكد. التحضير فوري.','cat-chicha':'الشيشة','cat-drinks':'مشروبات باردة','cat-juice':'عصائر فواكه','cat-hot':'مشروبات ساخنة','cat-water':'مياه معدنية','item-apple':'شيشة تفاح طازج','sub-apple':'نكهة مميزة · جلسة 45–60 دقيقة','item-mint':'شيشة نعناع طازج','sub-mint':'نكهة كلاسيكية · جلسة 45–60 دقيقة','sub-selecto':'مشروب غازي','sub-hamoud':'ليمونادة جزائرية','sub-mirinda':'برتقال / ليمون','sub-coca':'كلاسيك','sub-fanta':'برتقال غازي','sub-izem':'مشروب طاقة','item-tea':'شاي بالنعناع','item-coffee':'إسبريسو','sum-title':'🧾 طلبك','sum-total-label':'المجموع','l-name':'اسمك','l-phone':'واتساب','btn-txt':'تأكيد الطلب','cash-note':'الدفع نقداً فقط · في اللاونج','modal-title':'تم تأكيد الطلب!','modal-desc':'تم تسجيل طلبك. سيُرسَل إيصال على واتساب.','btn-wa-client':'💬 استلم إيصالي على واتساب','btn-close':'انتهى ←'}
+};
+function setLang(l){localStorage.setItem('bb_lang',l);document.body.style.direction=l==='ar'?'rtl':'ltr';document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));const t=T[l]||T.fr;for(const[id,v]of Object.entries(t)){const el=document.getElementById(id);if(el)el.innerHTML=v;}}
+const saved=localStorage.getItem('bb_lang');if(saved&&T[saved])setLang(saved);
+document.querySelectorAll('[data-lang]').forEach(btn=>btn.addEventListener('click',()=>setLang(btn.dataset.lang)));
+</script>
+</body>
+</html>
